@@ -1,1 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex, nofollow">
+<title>Wi-Fi</title>
+<style>
+  :root {
+    --bg: #f4f4f2;
+    --panel: #ffffff;
+    --ink: #16161a;
+    --muted: #6b6b74;
+    --line: #e2e2df;
+    --accent: #2f6f4e;
+    --accent-ink: #ffffff;
+    --ok: #2f6f4e;
+    --radius: 18px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111113;
+      --panel: #1c1c20;
+      --ink: #f2f2f0;
+      --muted: #9a9aa4;
+      --line: #2e2e34;
+      --accent: #6bbf8e;
+      --accent-ink: #10231a;
+      --ok: #6bbf8e;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: max(20px, env(safe-area-inset-top)) 20px max(28px, env(safe-area-inset-bottom));
+    min-height: 100vh;
+  }
+  main { width: 100%; max-width: 420px; }
 
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 14px;
+  }
+
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 8px;
+  }
+  h1 {
+    font-size: 26px;
+    line-height: 1.2;
+    margin: 0;
+    letter-spacing: -0.02em;
+    word-break: break-word;
+  }
+
+  .field { margin-top: 20px; }
+  .field + .field { margin-top: 16px; }
+
+  .value {
+    font: 600 21px/1.35 ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+    word-break: break-all;
+    user-select: all;
+    -webkit-user-select: all;
+  }
+
+  button {
+    font: inherit;
+    font-weight: 600;
+    width: 100%;
+    padding: 14px 18px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    background: var(--accent);
+    color: var(--accent-ink);
+    cursor: pointer;
+    margin-top: 12px;
+    transition: transform .06s ease, opacity .15s ease;
+  }
+  button:active { transform: scale(.985); }
+  button.secondary {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--line);
+  }
+  button.done { background: var(--ok); }
+
+  .qrwrap { text-align: center; }
+  .qrwrap canvas {
+    width: 100%;
+    max-width: 260px;
+    height: auto;
+    image-rendering: pixelated;
+    background: #fff;
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid var(--line);
+  }
+
+  .hint {
+    color: var(--muted);
+    font-size: 13.5px;
+    margin: 12px 0 0;
+  }
+  .steps {
+    color: var(--muted);
+    font-size: 13.5px;
+    margin: 14px 0 0;
+    padding-left: 20px;
+  }
+  .steps li + li { margin-top: 5px; }
+
+  label { display: block; font-size: 13.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+  input[type=text], select {
+    font: inherit;
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--ink);
+  }
+  .row { display: flex; gap: 10px; align-items: center; margin-top: 14px; }
+  .row input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
+  .row label { margin: 0; font-weight: 500; }
+
+  .out {
+    font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    word-break: break-all;
+    margin-top: 16px;
+    color: var(--muted);
+  }
+  .err { color: #c0392b; font-size: 14px; }
+  @media (prefers-color-scheme: dark) { .err { color: #ff8a7a; } }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <noscript>
+    <div class="card">
+      <p class="eyebrow">Wi-Fi network</p>
+      <h1>SunPlaza101!</h1>
+      <div class="field">
+        <label>Password</label>
+        <div class="value">9417786695</div>
+      </div>
+      <p class="hint">This page normally shows a QR code too, but that needs JavaScript, which is switched off in this browser.</p>
+    </div>
+  </noscript>
+
+  <!-- ============ DISPLAY MODE ============ -->
+  <div id="display" hidden>
+    <div class="card">
+      <p class="eyebrow">Wi-Fi network</p>
+      <h1 id="ssid"></h1>
+
+      <div class="field">
+        <label>Password</label>
+        <div class="value" id="pw"></div>
+        <button id="copy">Copy password</button>
+      </div>
+
+      <ol class="steps">
+        <li>Tap <strong>Copy password</strong> above.</li>
+        <li>Open <strong>Settings &rsaquo; Wi-Fi</strong>.</li>
+        <li>Pick <strong id="ssid2"></strong>, then paste.</li>
+      </ol>
+    </div>
+
+    <div class="card qrwrap">
+      <p class="eyebrow">Or scan to join</p>
+      <canvas id="qr"></canvas>
+      <p class="hint">Point another phone's camera here — iPhone and Android both join straight from this code.</p>
+    </div>
+  </div>
+
+  <!-- ============ BUILDER MODE ============ -->
+  <div id="builder" hidden>
+    <div class="card">
+      <p class="eyebrow">Setup</p>
+      <h1>Build your tag link</h1>
+      <p class="hint">Fill this in once. Everything stays in the link's <code>#</code> fragment, which browsers never send to the server — these credentials are never uploaded anywhere.</p>
+
+      <div class="field">
+        <label for="i-ssid">Network name (SSID)</label>
+        <input type="text" id="i-ssid" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Exactly as it appears">
+      </div>
+      <div class="field">
+        <label for="i-pw">Password</label>
+        <input type="text" id="i-pw" autocapitalize="off" autocorrect="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="i-auth">Security</label>
+        <select id="i-auth">
+          <option value="WPA">WPA / WPA2 / WPA3 Personal</option>
+          <option value="WEP">WEP (legacy)</option>
+          <option value="nopass">Open — no password</option>
+        </select>
+      </div>
+      <div class="row">
+        <input type="checkbox" id="i-hidden">
+        <label for="i-hidden">Hidden network</label>
+      </div>
+
+      <div class="field">
+        <label for="i-base">Published page address</label>
+        <input type="text" id="i-base" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://yourname.github.io/repo/">
+        <p class="hint" id="basehint"></p>
+      </div>
+
+      <button id="make">Generate link</button>
+      <p class="hint err" id="makeerr" hidden></p>
+      <div class="out" id="out" hidden></div>
+      <button id="copylink" class="secondary" hidden>Copy link</button>
+      <button id="preview" class="secondary" hidden>Preview it</button>
+    </div>
+  </div>
+
+  <div id="broken" class="card" hidden>
+    <p class="eyebrow">Problem</p>
+    <h1>Link looks damaged</h1>
+    <p class="hint err" id="brokenmsg"></p>
+    <button class="secondary" id="rebuild">Build a new link</button>
+  </div>
+</main>
+
+<script>
+/* =====================================================================
+   YOUR NETWORK — this is the only part you ever need to edit.
+   Change a value, save, re-upload the file. That's it.
+   ===================================================================== */
+var NETWORK = {
+  s: 'SunPlaza101!',   // network name (SSID) — exactly as it appears
+  p: '9417786695',     // password
+  t: 'WPA',            // 'WPA' for WPA/WPA2/WPA3, 'WEP', or 'nopass' for open
+  h: 0                 // set to 1 if the network is hidden
+};
+/* ===================================================================== */
+
+// Minimal QR Code generator: byte mode, ECC levels L/M, versions 1-20.
+// Returns a boolean matrix. Self-contained, no dependencies.
+var QR = (function () {
+  'use strict';
+
+  // ---- Galois field GF(256) with primitive polynomial 0x11D ----
+  var EXP = new Uint8Array(512);
+  var LOG = new Uint8Array(256);
+  (function () {
+    var x = 1;
+    for (var i = 0; i < 255; i++) {
+      EXP[i] = x;
+      LOG[x] = i;
+      x <<= 1;
+      if (x & 0x100) x ^= 0x11d;
+    }
+    for (var j = 255; j < 512; j++) EXP[j] = EXP[j - 255];
+  })();
+
+  function gmul(a, b) {
+    if (a === 0 || b === 0) return 0;
+    return EXP[LOG[a] + LOG[b]];
+  }
+
+  // Generator polynomial for `degree` ECC codewords.
+  function rsGenerator(degree) {
+    var result = new Uint8Array(degree);
+    result[degree - 1] = 1; // coefficients stored high-to-low, monic
+    var root = 1;
+    for (var i = 0; i < degree; i++) {
+      for (var j = 0; j < degree; j++) {
+        result[j] = gmul(result[j], root);
+        if (j + 1 < degree) result[j] ^= result[j + 1];
+      }
+      root = gmul(root, 0x02);
+    }
+    return result;
+  }
+
+  function rsRemainder(data, generator) {
+    var degree = generator.length;
+    var result = new Uint8Array(degree);
+    for (var i = 0; i < data.length; i++) {
+      var factor = data[i] ^ result[0];
+      result.copyWithin(0, 1);
+      result[degree - 1] = 0;
+      for (var j = 0; j < degree; j++) {
+        result[j] ^= gmul(generator[j], factor);
+      }
+    }
+    return result;
+  }
+
+  // ---- Version / ECC tables (index by version 1..40) ----
+  // ECC codewords per block
+  var ECC_PER_BLOCK = {
+    L: [null, 7, 10, 15, 20, 26, 18, 20, 24, 30, 18, 20, 24, 26, 30, 22, 24, 28, 30, 28, 28],
+    M: [null, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26]
+  };
+  // number of error correction blocks
+  var NUM_BLOCKS = {
+    L: [null, 1, 1, 1, 1, 1, 2, 2, 2, 2, 4, 4, 4, 4, 4, 6, 6, 6, 6, 7, 8],
+    M: [null, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16]
+  };
+
+  var ECC_FORMAT_BITS = { L: 1, M: 0, Q: 3, H: 2 };
+
+  function numRawDataModules(ver) {
+    var result = (16 * ver + 128) * ver + 64;
+    if (ver >= 2) {
+      var numAlign = Math.floor(ver / 7) + 2;
+      result -= (25 * numAlign - 10) * numAlign - 55;
+      if (ver >= 7) result -= 36;
+    }
+    return result;
+  }
+
+  function numDataCodewords(ver, ecl) {
+    return (
+      Math.floor(numRawDataModules(ver) / 8) -
+      ECC_PER_BLOCK[ecl][ver] * NUM_BLOCKS[ecl][ver]
+    );
+  }
+
+  function alignmentPatternPositions(ver) {
+    if (ver === 1) return [];
+    var numAlign = Math.floor(ver / 7) + 2;
+    var step = Math.floor((ver * 8 + numAlign * 3 + 5) / (numAlign * 4 - 4)) * 2;
+    var result = [6];
+    for (var pos = ver * 4 + 10; result.length < numAlign; pos -= step) {
+      result.splice(1, 0, pos);
+    }
+    return result;
+  }
+
+  // ---- UTF-8 encoding ----
+  function toUtf8(str) {
+    var out = [];
+    for (var i = 0; i < str.length; i++) {
+      var c = str.charCodeAt(i);
+      if (c < 0x80) {
+        out.push(c);
+      } else if (c < 0x800) {
+        out.push(0xc0 | (c >> 6), 0x80 | (c & 0x3f));
+      } else if (c >= 0xd800 && c < 0xdc00 && i + 1 < str.length) {
+        var c2 = str.charCodeAt(i + 1);
+        var cp = 0x10000 + ((c - 0xd800) << 10) + (c2 - 0xdc00);
+        i++;
+        out.push(
+          0xf0 | (cp >> 18),
+          0x80 | ((cp >> 12) & 0x3f),
+          0x80 | ((cp >> 6) & 0x3f),
+          0x80 | (cp & 0x3f)
+        );
+      } else {
+        out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 0x3f), 0x80 | (c & 0x3f));
+      }
+    }
+    return out;
+  }
+
+  // ---- Bit buffer ----
+  function BitBuffer() {
+    this.bits = [];
+  }
+  BitBuffer.prototype.append = function (value, length) {
+    for (var i = length - 1; i >= 0; i--) {
+      this.bits.push((value >>> i) & 1);
+    }
+  };
+
+  // ---- Main encode ----
+  function encode(text, eclPreferred) {
+    var data = toUtf8(text);
+    var ecl = eclPreferred || 'M';
+    var version = null;
+
+    function capacityBits(ver, level) {
+      return numDataCodewords(ver, level) * 8;
+    }
+    function neededBits(ver) {
+      var ccBits = ver <= 9 ? 8 : 16;
+      return 4 + ccBits + data.length * 8;
+    }
+
+    // Try preferred ECC level first, then fall back to L for capacity.
+    var levels = ecl === 'M' ? ['M', 'L'] : ['L'];
+    var chosenLevel = null;
+    outer: for (var li = 0; li < levels.length; li++) {
+      for (var v = 1; v <= 20; v++) {
+        if (neededBits(v) <= capacityBits(v, levels[li])) {
+          version = v;
+          chosenLevel = levels[li];
+          break outer;
+        }
+      }
+    }
+    if (version === null) throw new Error('Data too long for QR encoder');
+    ecl = chosenLevel;
+
+    var bb = new BitBuffer();
+    bb.append(0x4, 4); // byte mode
+    bb.append(data.length, version <= 9 ? 8 : 16);
+    for (var i = 0; i < data.length; i++) bb.append(data[i], 8);
+
+    var totalDataBits = numDataCodewords(version, ecl) * 8;
+    // terminator
+    var term = Math.min(4, totalDataBits - bb.bits.length);
+    bb.append(0, term);
+    // pad to byte boundary
+    bb.append(0, (8 - (bb.bits.length % 8)) % 8);
+    // pad bytes
+    var padBytes = [0xec, 0x11];
+    var pi = 0;
+    while (bb.bits.length < totalDataBits) {
+      bb.append(padBytes[pi % 2], 8);
+      pi++;
+    }
+
+    var dataCodewords = new Uint8Array(bb.bits.length / 8);
+    for (var b = 0; b < bb.bits.length; b++) {
+      if (bb.bits[b]) dataCodewords[b >>> 3] |= 0x80 >>> (b & 7);
+    }
+
+    var allCodewords = interleave(dataCodewords, version, ecl);
+    var matrix = buildMatrix(version, ecl, allCodewords);
+    return { matrix: matrix, size: matrix.length, version: version, ecl: ecl };
+  }
+
+  function interleave(data, version, ecl) {
+    var numBlocks = NUM_BLOCKS[ecl][version];
+    var eccLen = ECC_PER_BLOCK[ecl][version];
+    var rawCodewords = Math.floor(numRawDataModules(version) / 8);
+    var numShortBlocks = numBlocks - (rawCodewords % numBlocks);
+    var shortBlockLen = Math.floor(rawCodewords / numBlocks);
+
+    var blocks = [];
+    var generator = rsGenerator(eccLen);
+    var k = 0;
+    for (var i = 0; i < numBlocks; i++) {
+      var datLen = shortBlockLen - eccLen + (i < numShortBlocks ? 0 : 1);
+      var dat = data.slice(k, k + datLen);
+      k += datLen;
+      var ecc = rsRemainder(dat, generator);
+      var block = new Uint8Array(dat.length + ecc.length);
+      block.set(dat, 0);
+      block.set(ecc, dat.length);
+      blocks.push({ data: dat, ecc: ecc });
+    }
+
+    var result = [];
+    var maxDataLen = shortBlockLen - eccLen + 1;
+    for (var c = 0; c < maxDataLen; c++) {
+      for (var bi = 0; bi < numBlocks; bi++) {
+        if (c < blocks[bi].data.length) result.push(blocks[bi].data[c]);
+      }
+    }
+    for (var e = 0; e < eccLen; e++) {
+      for (var bj = 0; bj < numBlocks; bj++) {
+        result.push(blocks[bj].ecc[e]);
+      }
+    }
+    return result;
+  }
+
+  function buildMatrix(version, ecl, codewords) {
+    var size = version * 4 + 17;
+    var modules = [];
+    var isFunction = [];
+    for (var i = 0; i < size; i++) {
+      modules.push(new Array(size).fill(false));
+      isFunction.push(new Array(size).fill(false));
+    }
+
+    function setFunc(x, y, dark) {
+      if (x < 0 || y < 0 || x >= size || y >= size) return;
+      modules[y][x] = dark;
+      isFunction[y][x] = true;
+    }
+
+    // timing patterns first; finder patterns intentionally overwrite them
+    for (var t = 0; t < size; t++) {
+      setFunc(6, t, t % 2 === 0);
+      setFunc(t, 6, t % 2 === 0);
+    }
+
+    // finder patterns + separators
+    function drawFinder(cx, cy) {
+      for (var dy = -4; dy <= 4; dy++) {
+        for (var dx = -4; dx <= 4; dx++) {
+          var dist = Math.max(Math.abs(dx), Math.abs(dy));
+          setFunc(cx + dx, cy + dy, dist !== 2 && dist !== 4);
+        }
+      }
+    }
+    drawFinder(3, 3);
+    drawFinder(size - 4, 3);
+    drawFinder(3, size - 4);
+
+    // alignment patterns
+    var alignPos = alignmentPatternPositions(version);
+    for (var ai = 0; ai < alignPos.length; ai++) {
+      for (var aj = 0; aj < alignPos.length; aj++) {
+        var skip =
+          (ai === 0 && aj === 0) ||
+          (ai === 0 && aj === alignPos.length - 1) ||
+          (ai === alignPos.length - 1 && aj === 0);
+        if (skip) continue;
+        for (var ady = -2; ady <= 2; ady++) {
+          for (var adx = -2; adx <= 2; adx++) {
+            setFunc(
+              alignPos[aj] + adx,
+              alignPos[ai] + ady,
+              Math.max(Math.abs(adx), Math.abs(ady)) !== 1
+            );
+          }
+        }
+      }
+    }
+
+    // reserve format info areas (filled later)
+    drawFormatBits(0, true);
+
+    // version info for version >= 7
+    if (version >= 7) {
+      var rem = version;
+      for (var vi = 0; vi < 12; vi++) {
+        rem = (rem << 1) ^ ((rem >>> 11) * 0x1f25);
+      }
+      var vbits = (version << 12) | rem;
+      for (var vb = 0; vb < 18; vb++) {
+        var bit = ((vbits >>> vb) & 1) === 1;
+        var a = size - 11 + (vb % 3);
+        var bpos = Math.floor(vb / 3);
+        setFunc(a, bpos, bit);
+        setFunc(bpos, a, bit);
+      }
+    }
+
+    function drawFormatBits(mask, reserveOnly) {
+      var eclBits = ECC_FORMAT_BITS[ecl];
+      var dataBits = (eclBits << 3) | mask;
+      var rem2 = dataBits;
+      for (var fi = 0; fi < 10; fi++) {
+        rem2 = (rem2 << 1) ^ ((rem2 >>> 9) * 0x537);
+      }
+      var bits = ((dataBits << 10) | rem2) ^ 0x5412;
+
+      for (var i2 = 0; i2 <= 5; i2++) setFunc(8, i2, getBit(bits, i2));
+      setFunc(8, 7, getBit(bits, 6));
+      setFunc(8, 8, getBit(bits, 7));
+      setFunc(7, 8, getBit(bits, 8));
+      for (var i3 = 9; i3 < 15; i3++) setFunc(14 - i3, 8, getBit(bits, i3));
+
+      for (var i4 = 0; i4 < 8; i4++) setFunc(size - 1 - i4, 8, getBit(bits, i4));
+      for (var i5 = 8; i5 < 15; i5++) setFunc(8, size - 15 + i5, getBit(bits, i5));
+      setFunc(8, size - 8, true); // always dark module
+    }
+
+    function getBit(v, i) {
+      return ((v >>> i) & 1) !== 0;
+    }
+
+    // place data codewords in zigzag
+    var bitIdx = 0;
+    for (var right = size - 1; right >= 1; right -= 2) {
+      if (right === 6) right = 5;
+      for (var vert = 0; vert < size; vert++) {
+        for (var jj = 0; jj < 2; jj++) {
+          var x = right - jj;
+          var upward = ((right + 1) & 2) === 0;
+          var y = upward ? size - 1 - vert : vert;
+          if (!isFunction[y][x] && bitIdx < codewords.length * 8) {
+            modules[y][x] = ((codewords[bitIdx >>> 3] >>> (7 - (bitIdx & 7))) & 1) !== 0;
+            bitIdx++;
+          }
+        }
+      }
+    }
+
+    // choose best mask
+    var bestMask = 0;
+    var minPenalty = Infinity;
+    for (var m = 0; m < 8; m++) {
+      applyMask(m);
+      drawFormatBits(m, false);
+      var p = penalty();
+      if (p < minPenalty) {
+        minPenalty = p;
+        bestMask = m;
+      }
+      applyMask(m); // undo (XOR is its own inverse)
+    }
+    applyMask(bestMask);
+    drawFormatBits(bestMask, false);
+
+    function applyMask(mask) {
+      for (var y = 0; y < size; y++) {
+        for (var x = 0; x < size; x++) {
+          if (isFunction[y][x]) continue;
+          var invert;
+          switch (mask) {
+            case 0: invert = (x + y) % 2 === 0; break;
+            case 1: invert = y % 2 === 0; break;
+            case 2: invert = x % 3 === 0; break;
+            case 3: invert = (x + y) % 3 === 0; break;
+            case 4: invert = (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0; break;
+            case 5: invert = ((x * y) % 2) + ((x * y) % 3) === 0; break;
+            case 6: invert = (((x * y) % 2) + ((x * y) % 3)) % 2 === 0; break;
+            case 7: invert = (((x + y) % 2) + ((x * y) % 3)) % 2 === 0; break;
+          }
+          if (invert) modules[y][x] = !modules[y][x];
+        }
+      }
+    }
+
+    function penalty() {
+      var result = 0;
+      var y, x, runColor, runLen, i;
+      // rule 1: rows
+      for (y = 0; y < size; y++) {
+        runColor = false; runLen = 0;
+        for (x = 0; x < size; x++) {
+          if (modules[y][x] === runColor) {
+            runLen++;
+            if (runLen === 5) result += 3;
+            else if (runLen > 5) result++;
+          } else {
+            runColor = modules[y][x];
+            runLen = 1;
+          }
+        }
+      }
+      // rule 1: columns
+      for (x = 0; x < size; x++) {
+        runColor = false; runLen = 0;
+        for (y = 0; y < size; y++) {
+          if (modules[y][x] === runColor) {
+            runLen++;
+            if (runLen === 5) result += 3;
+            else if (runLen > 5) result++;
+          } else {
+            runColor = modules[y][x];
+            runLen = 1;
+          }
+        }
+      }
+      // rule 2: 2x2 blocks
+      for (y = 0; y < size - 1; y++) {
+        for (x = 0; x < size - 1; x++) {
+          var c = modules[y][x];
+          if (c === modules[y][x + 1] && c === modules[y + 1][x] && c === modules[y + 1][x + 1]) {
+            result += 3;
+          }
+        }
+      }
+      // rule 3: finder-like patterns
+      var pattern = [true, false, true, true, true, false, true];
+      function matchesAt(getter, pos, len) {
+        // pattern + 4 light on one side
+        var ok = true;
+        for (var k2 = 0; k2 < 7; k2++) {
+          if (getter(pos + k2) !== pattern[k2]) { ok = false; break; }
+        }
+        if (!ok) return false;
+        var before = true, after = true;
+        for (var k3 = 1; k3 <= 4; k3++) {
+          if (pos - k3 < 0 || getter(pos - k3) !== false) { before = false; break; }
+        }
+        for (var k4 = 0; k4 < 4; k4++) {
+          if (pos + 7 + k4 >= len || getter(pos + 7 + k4) !== false) { after = false; break; }
+        }
+        return before || after;
+      }
+      for (y = 0; y < size; y++) {
+        for (x = 0; x + 7 <= size; x++) {
+          (function (yy) {
+            if (matchesAt(function (p) { return modules[yy][p]; }, x, size)) result += 40;
+          })(y);
+        }
+      }
+      for (x = 0; x < size; x++) {
+        for (y = 0; y + 7 <= size; y++) {
+          (function (xx) {
+            if (matchesAt(function (p) { return modules[p][xx]; }, y, size)) result += 40;
+          })(x);
+        }
+      }
+      // rule 4: dark module ratio
+      var dark = 0;
+      for (y = 0; y < size; y++) for (x = 0; x < size; x++) if (modules[y][x]) dark++;
+      var total = size * size;
+      var k5 = Math.ceil(Math.abs(dark * 20 - total * 10) / total) - 1;
+      result += k5 * 10;
+      return result;
+    }
+
+    return modules;
+  }
+
+  // ---- Wi-Fi payload helper ----
+  function escapeWifi(s) {
+    return String(s).replace(/([\\;,:"])/g, '\\$1');
+  }
+  function wifiPayload(ssid, password, auth, hidden) {
+    var t = auth || 'WPA';
+    var parts = 'WIFI:T:' + t + ';S:' + escapeWifi(ssid) + ';';
+    if (t !== 'nopass') parts += 'P:' + escapeWifi(password) + ';';
+    if (hidden) parts += 'H:true;';
+    return parts + ';';
+  }
+
+  return { encode: encode, wifiPayload: wifiPayload };
+})();
+
+
+
+(function () {
+  'use strict';
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---- fragment codec (base64url of JSON) ----
+  function encodePayload(obj) {
+    var json = JSON.stringify(obj);
+    var bytes = new TextEncoder().encode(json);
+    var bin = '';
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function decodePayload(str) {
+    var b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    var bin = atob(b64);
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return JSON.parse(new TextDecoder().decode(bytes));
+  }
+
+  function drawQR(canvas, text) {
+    var res = QR.encode(text, 'M');
+    var m = res.matrix, n = res.size, quiet = 3, scale = 8;
+    var dim = (n + quiet * 2) * scale;
+    canvas.width = dim;
+    canvas.height = dim;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, dim, dim);
+    ctx.fillStyle = '#000000';
+    for (var y = 0; y < n; y++) {
+      for (var x = 0; x < n; x++) {
+        if (m[y][x]) {
+          ctx.fillRect((x + quiet) * scale, (y + quiet) * scale, scale, scale);
+        }
+      }
+    }
+  }
+
+  function copyText(text, btn, okLabel) {
+    var original = btn.textContent;
+    function flash() {
+      btn.textContent = okLabel;
+      btn.classList.add('done');
+      setTimeout(function () {
+        btn.textContent = original;
+        btn.classList.remove('done');
+      }, 1600);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(flash, function () { legacy(); });
+    } else { legacy(); }
+    function legacy() {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+      try { document.execCommand('copy'); flash(); } catch (e) { /* user can long-press */ }
+      document.body.removeChild(ta);
+    }
+  }
+
+  function showDisplay(cfg) {
+    document.title = cfg.s + ' — Wi-Fi';
+    $('ssid').textContent = cfg.s;
+    $('ssid2').textContent = cfg.s;
+
+    var auth = cfg.t || 'WPA';
+    var pwField = $('pw').parentNode;
+    if (auth === 'nopass') {
+      pwField.hidden = true;
+      $('display').querySelector('.steps').innerHTML =
+        '<li>Open <strong>Settings &rsaquo; Wi-Fi</strong>.</li><li>Pick <strong>' +
+        $('ssid2').textContent + '</strong> — it’s an open network, no password needed.</li>';
+    } else {
+      $('pw').textContent = cfg.p;
+      $('copy').addEventListener('click', function () {
+        copyText(cfg.p, $('copy'), 'Copied ✓');
+      });
+    }
+
+    try {
+      drawQR($('qr'), QR.wifiPayload(cfg.s, cfg.p || '', auth, !!cfg.h));
+    } catch (e) {
+      $('qr').parentNode.hidden = true;
+    }
+    $('display').hidden = false;
+  }
+
+  function showBuilder() {
+    $('builder').hidden = false;
+    var built = null;
+
+    var isHosted = location.protocol === 'http:' || location.protocol === 'https:';
+    if (isHosted) {
+      $('i-base').value = location.origin + location.pathname;
+      $('basehint').textContent =
+        'Detected automatically. Only change this if you publish the page somewhere else.';
+    } else {
+      $('basehint').textContent =
+        'You are viewing this file straight from your computer, so it has no web address yet. ' +
+        'Publish it first, then paste that https:// address here — a link to a local file will not work on an NFC tag.';
+    }
+
+    $('make').addEventListener('click', function () {
+      var ssid = $('i-ssid').value.trim();
+      var pw = $('i-pw').value;
+      var auth = $('i-auth').value;
+      var hidden = $('i-hidden').checked;
+      var base = $('i-base').value.trim();
+
+      function bail(msg, field) {
+        $('makeerr').textContent = msg;
+        $('makeerr').hidden = false;
+        if (field) field.focus();
+      }
+      $('makeerr').hidden = true;
+
+      if (!ssid) return bail('Enter the network name.', $('i-ssid'));
+      if (!base) return bail('Enter the published address of this page.', $('i-base'));
+      if (!/^https?:\/\/./i.test(base)) {
+        return bail('That address must start with https:// — a file on your computer cannot be opened from a tag.', $('i-base'));
+      }
+
+      base = base.split('#')[0];
+
+      var cfg = { s: ssid, t: auth };
+      if (auth !== 'nopass') cfg.p = pw;
+      if (hidden) cfg.h = 1;
+
+      built = base + '#' + encodePayload(cfg);
+      $('out').textContent = built;
+      $('out').hidden = false;
+      $('copylink').hidden = false;
+      $('preview').hidden = false;
+    });
+
+    $('copylink').addEventListener('click', function () {
+      if (built) copyText(built, $('copylink'), 'Copied ✓');
+    });
+    $('preview').addEventListener('click', function () {
+      if (!built) return;
+      // Same-document hash change does not re-run this script, so reload explicitly.
+      location.hash = built.split('#')[1];
+      location.reload();
+    });
+  }
+
+  function showBroken(msg) {
+    $('brokenmsg').textContent = msg;
+    $('broken').hidden = false;
+    $('rebuild').addEventListener('click', function () {
+      location.hash = '';
+      location.reload();
+    });
+  }
+
+  // A hash change alone would not re-run this script, so re-route on it.
+  window.addEventListener('hashchange', function () { location.reload(); });
+
+  // ---- route ----
+  // Priority: credentials in the URL fragment, else the NETWORK block above,
+  // else fall back to the builder form.
+  var baked =
+    typeof NETWORK === 'object' && NETWORK && typeof NETWORK.s === 'string' && NETWORK.s
+      ? NETWORK
+      : null;
+
+  var frag = location.hash.replace(/^#/, '');
+  var cfg = null;
+
+  if (frag) {
+    try {
+      var parsed = decodePayload(frag);
+      if (parsed && typeof parsed.s === 'string' && parsed.s) cfg = parsed;
+    } catch (e) {
+      cfg = null;
+    }
+    if (!cfg && !baked) {
+      showBroken('The part after the # in this address could not be read. It may have been truncated when the link was copied.');
+      return;
+    }
+  }
+
+  if (!cfg) cfg = baked;
+
+  if (cfg) showDisplay(cfg);
+  else showBuilder();
+})();
+</script>
+</body>
+</html>
